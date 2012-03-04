@@ -42,8 +42,8 @@ def parse_args():
     parser.add_argument('-min_jaccard', type=float, default=0.8, help='minimum jaccard similarity to judge as duplicate')
     parser.add_argument('-max_edit_rate', type=float, default=.1, help='Maximum edit distance rate (edit_dist(doc1,doc2)/min(len(doc1),len(doc2))) to judge as a duplicate')
     parser.add_argument('-min_doc_len', type=int, default=100, help='Minimum doc length for fuzzy matching.')
-    parser.add_argument('-db_host', type=unicode, default="10.172.126.80",help='mongodb hostname/ip')
-    parser.add_argument('-db_name', type=unicode, default="epidemiciq",help='mongodb db name')
+    parser.add_argument('-db_host', type=unicode, default="localhost",help='mongodb hostname/ip')
+    parser.add_argument('-db_name', type=unicode, default=None,help='mongodb db name')
     parser.add_argument('-coll_name', type=unicode, default="Report",help='mongodb collection name with db specified by -db_name arg')
 
     args = parser.parse_args()
