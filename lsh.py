@@ -5,9 +5,10 @@ import Levenshtein
 import sys
 
 """
-Takes a row from a mongodb query and creates a list of tokenized of words from the url,
-title, rss-content and extended content along with the ObjectId object corresponding to
-that doc, and the unix time stamp of when that document was added to the db
+Takes a row from a mongodb query and creates a list of tokenized words from the text
+in fields listed in fields.  Returns the primary key (ObjectId) corresponding to
+that doc, and the unix time stamp of when that document was added to the db, along
+with the list of tokenized words.
 """
 def prepare_doc(doc,fields=('URL','Title','Content','ExtendedContent')):
     try:
@@ -17,7 +18,7 @@ def prepare_doc(doc,fields=('URL','Title','Content','ExtendedContent')):
         for field in fields:
             if doc.has_key(field) and doc[field]:
                 field_val = doc[field]
-                toks = field_val.split()
+                toks = field_val.split() # NOTE: we assume text has already been cleaned
                 for tok in toks:
                     prepared.append(tok.strip())
             else:
@@ -89,7 +90,7 @@ class LSHCache:
         
     """
     Takes a sequence of tokenized words and maps each shingle to a unique id.
-    These unique ids, are then added to the shingle_vec object which is just a sparese
+    These unique ids, are then added to the shingle_vec object which is just a sparse
     vector implemented as a dict with v[id]=1 when a shingle id is present
     """
     def get_shingle_vec(self, doc):
@@ -107,7 +108,7 @@ class LSHCache:
 
     """
     Takes a shingle vec and computes the minhash signature of length n using
-    an approximate permutations.  This method is explained in Mining Massive
+    approximate permutations.  This method is explained in Mining Massive
     Datasets by Rajaraman and Ullman (http://infolab.stanford.edu/~ullman/mmds.html)
     in section 3.3.4.
     """
@@ -123,7 +124,7 @@ class LSHCache:
         return mhash
 
     """
-    Takes an n-dimensional minhash signature and computes _b hash for each of
+    Takes an n-dimensional minhash signature and computes _b hashes for each of
     _b bands of _r rows in the signature.  These hashes can take on any value that
     can be stored in the 32bit integer.
     """
@@ -202,7 +203,7 @@ class LSHCache:
             f.write(str(id1)+'\t'+str(id2)+'\t'+str(jaccard)+'\n')
         ff.close()
 
-    """Computes the mean similarity for a  duplicate data structure.
+    """Computes the mean similarity for a duplicate data structure.
        Expects dups to be a list of tuples(tuple(id1,id2),score) where score
        is either a jaccard similarity or edit distance rate"""
     def analyze_dups(self,dups,docs):
