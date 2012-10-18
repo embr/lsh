@@ -30,11 +30,11 @@ then, to update the cache with any reports added to the db since the last docume
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-cache', type=unicode, default=None, help='The location of the cache file to use. If provided, the program will run in worker mode, waiting for duplicate check requests against the specified cache file.')
-    parser.add_argument('-save', type=unicode, default=u'anon_'+unicode(int(time.time())), help='Save name for cache file. If loading from saved cache, updated cache will be saved to same location.  Otherwise, default is anon_<unix_time>.cache')
+    parser.add_argument('-cache', default=None, help='The location of the cache file to use. If provided, the program will run in worker mode, waiting for duplicate check requests against the specified cache file.')
+    parser.add_argument('-save', default=u'anon_'+unicode(int(time.time())), help='Save name for cache file. If loading from saved cache, updated cache will be saved to same location.  Otherwise, default is anon_<unix_time>.cache')
     parser.add_argument('-start', type=int, default=None, help='If cache file not supplied, this arg specifies the earliest time from which to build a new cache.  value is given as unix time')
     parser.add_argument('-passive', action='store_true', default=False,  help='checks docs against cache without adding those docs to cache')
-    parser.add_argument('-tag', type=str, default=unicode(int(time.time())), help='uses this name')
+    parser.add_argument('-tag', default=unicode(int(time.time())), help='uses this name')
     parser.add_argument('-n', type=int, default=100, help='Number of hashes per document. Note, b*n==r.')
     parser.add_argument('-b', type=int, default=20, help='Number of bins in cache. Note, b*n==r.')
     parser.add_argument('-r', type=int, default=5, help='Number of rows per bin. Note, b*n==r.')
@@ -42,18 +42,18 @@ def parse_args():
     parser.add_argument('-min_jaccard', type=float, default=0.8, help='minimum jaccard similarity to judge as duplicate')
     parser.add_argument('-max_edit_rate', type=float, default=.1, help='Maximum edit distance rate (edit_dist(doc1,doc2)/min(len(doc1),len(doc2))) to judge as a duplicate')
     parser.add_argument('-min_doc_len', type=int, default=100, help='Minimum doc length for fuzzy matching.')
-    parser.add_argument('-db_host', type=unicode, default="localhost",help='mongodb hostname/ip')
-    parser.add_argument('-db_name', type=unicode, default=None,help='mongodb db name')
-    parser.add_argument('-coll_name', type=unicode, default="Report",help='mongodb collection name with db specified by -db_name arg')
+    parser.add_argument('-db_host', default="localhost",help='mongodb hostname/ip')
+    parser.add_argument('-db_name', default=None,help='mongodb db name')
+    parser.add_argument('-coll_name', default="Report",help='mongodb collection name with db specified by -db_name arg')
 
     args = parser.parse_args()
     print args
     return args
 
-"""
-Returns a mongo collection object for the db_host/db_name/coll_name collections
-"""
 def get_coll(db_host,db_name,coll_name):
+    """
+    Returns a mongo collection object for the db_host/db_name/coll_name collections
+    """
     conn = pymongo.Connection(db_host)
     print '[get_coll]\tgot connection db_host: %s' % (db_host)
     db = conn[db_name]
@@ -61,23 +61,23 @@ def get_coll(db_host,db_name,coll_name):
     print '[get_coll]\tgot collection: epidemiciq.Report, count({})=%d' % (coll.count())
     return coll
 
-"""
-Computes the jaccard SIMILARITY between two tokenized lists
-"""
 def jaccard_sim(doc1,doc2):
+    """
+    Computes the jaccard SIMILARITY between two tokenized lists
+    """
     s1 = set(doc1)
     s2 = set(doc2)
     i = s1.intersection(s2)
     u = s1.union(s2)
     return float(len(i))/float(len(u))
 
-"""
-Given a mongodb document, doc, and a set of candidate object_ids (mongo ids that is), 
-this method returns the earliest doc_id which satisfies ALL OF the jaccard simmilarity
-threshold, the Levenshtein edit distance rate threshold, and the minimum document length
-threshold.  It returns None, if no such document can be found
-"""
 def get_dup(coll,doc,cand_buckets,jac_thres,edit_rate_thres,min_doc_len):
+    """
+    Given a mongodb document, doc, and a set of candidate object_ids (mongo ids that is), 
+    this method returns the earliest doc_id which satisfies ALL OF the jaccard simmilarity
+    threshold, the Levenshtein edit distance rate threshold, and the minimum document length
+    threshold.  It returns None, if no such document can be found
+    """
     dup_id = None
     [doc_id,date_added,doc_prepared] = lsh.prepare_doc(doc)
     if (len(doc_prepared) < min_doc_len):
@@ -103,12 +103,12 @@ def get_dup(coll,doc,cand_buckets,jac_thres,edit_rate_thres,min_doc_len):
                 dup_id = cand_id
     return dup_id
 
-"""
-This method is the main entry point and first parses the arguments, then creates an LSHCache
-object.  After loading or creating a new cache, it then queries the database for any reports
-added since the cache was last updated, and inserts all returned documents.
-"""
 def main():
+    """
+    This method is the main entry point and first parses the arguments, then creates an LSHCache
+    object.  After loading or creating a new cache, it then queries the database for any reports
+    added since the cache was last updated, and inserts all returned documents.
+    """
     args=parse_args()
     cache = ()
     if args.cache: # load from file
@@ -153,12 +153,12 @@ def main():
     pickle.dump(cache,fout)
     fout.close()
 
-############## SCRIPT BEGINS HERE ###################
 
-main()
+if __name__ == '__main__':
+    main()
 
-#profiling stuff
-#cProfile.run('main()','prof.txt')
-#p = pstats.Stats('prof.txt')
-#p.strip_dirs().sort_stats(-1).print_stats()
-#p.sort_stats('cumulative').print_stats(10)
+#     profiling stuff
+#     cProfile.run('main()','prof.txt')
+#     p = pstats.Stats('prof.txt')
+#     p.strip_dirs().sort_stats(-1).print_stats()
+#     p.sort_stats('cumulative').print_stats(10)

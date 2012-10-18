@@ -4,13 +4,13 @@ import random
 import Levenshtein
 import sys
 
-"""
-Takes a row from a mongodb query and creates a list of tokenized words from the text
-in fields listed in fields.  Returns the primary key (ObjectId) corresponding to
-that doc, and the unix time stamp of when that document was added to the db, along
-with the list of tokenized words.
-"""
 def prepare_doc(doc,fields=('URL','Title','Content','ExtendedContent')):
+    """
+    Takes a row from a mongodb query and creates a list of tokenized words from the text
+    in fields listed in fields.  Returns the primary key (ObjectId) corresponding to
+    that doc, and the unix time stamp of when that document was added to the db, along
+    with the list of tokenized words.
+    """
     try:
         prepared = []
         doc_id = doc['_id']
@@ -72,28 +72,28 @@ class LSHCache:
             self._cache = [defaultdict(list) for i in range(self._b)]
 
 
-    """
-    This initializes the instance variable _memomask which is a list of the 
-    random 32 bits associated with each hash function
-    """
     def init_hash_masks(self,num_hash):
+        """
+        This initializes the instance variable _memomask which is a list of the 
+        random 32 bits associated with each hash function
+        """
         for i in range(num_hash):
             random.seed(i)
             self._memomask.append(int(random.getrandbits(32)))
 
-    """
-    This is a simple hash function which returns the result of a bitwise XOR
-    on the input x and the 32-bit random mask
-    """
     def xor_hash(self,mask,x):
+        """
+        This is a simple hash function which returns the result of a bitwise XOR
+        on the input x and the 32-bit random mask
+        """
         return int(x ^ mask)
         
-    """
-    Takes a sequence of tokenized words and maps each shingle to a unique id.
-    These unique ids, are then added to the shingle_vec object which is just a sparse
-    vector implemented as a dict with v[id]=1 when a shingle id is present
-    """
     def get_shingle_vec(self, doc):
+        """
+        Takes a sequence of tokenized words and maps each shingle to a unique id.
+        These unique ids, are then added to the shingle_vec object which is just a sparse
+        vector implemented as a dict with v[id]=1 when a shingle id is present
+        """
         #print '[get_shingle_vec]\tentering with len(doc)=%d' % (len(doc))
         v = {}
         for n in range(self._max_shingle):
@@ -106,13 +106,13 @@ class LSHCache:
                 v[self._shingles[tuple(s)]] = 1
         return v
 
-    """
-    Takes a shingle vec and computes the minhash signature of length n using
-    approximate permutations.  This method is explained in Mining Massive
-    Datasets by Rajaraman and Ullman (http://infolab.stanford.edu/~ullman/mmds.html)
-    in section 3.3.4.
-    """
     def get_sig(self,shingle_vec,num_perms):
+        """
+        Takes a shingle vec and computes the minhash signature of length n using
+        approximate permutations.  This method is explained in Mining Massive
+        Datasets by Rajaraman and Ullman (http://infolab.stanford.edu/~ullman/mmds.html)
+        in section 3.3.4.
+        """
         mhash = [{} for i in range(num_perms)]
         keys = sorted(shingle_vec.keys())
         for r in keys:
@@ -123,30 +123,34 @@ class LSHCache:
                     mhash[i] = h[i]
         return mhash
 
-    """
-    Takes an n-dimensional minhash signature and computes _b hashes for each of
-    _b bands of _r rows in the signature.  These hashes can take on any value that
-    can be stored in the 32bit integer.
-    """
     def get_lsh(self,sig,b,r):
+        """
+        Takes an n-dimensional minhash signature and computes _b hashes for each of
+        _b bands of _r rows in the signature.  These hashes can take on any value that
+        can be stored in the 32bit integer.
+        """
         lsh = []
         for i,band in enumerate(range(b)):
             lsh.append(hash(tuple(sig[i*r:i*r+r])))
         #print '[get_lsh]\thashed signature: %s\n[get_lsh]\tto bins: %s' % (sig,lsh)
         return lsh
     
-    """Returns a list of buckets (which are themselves lists) which contain the ids
-       of any matching documents.  If the cache was built in chronological order,
-       the first element in the bucket list can be treated as the original document"""
     def get_dup_buckets(self,lsh,all=False,min_jaccard=0.0,max_edit_rate=1):
+        """
+        Returns a list of buckets (which are themselves lists) which contain the ids
+        of any matching documents.  If the cache was built in chronological order,
+        the first element in the bucket list can be treated as the original document
+        """
         dups = []
         for i,band_bucket in enumerate(lsh):
             dups.append(self._cache[i][band_bucket])
         return dups
 
-    """Given an LSH vector of bucket indices, this method inserts the current doc
-       id in the corresponding bucket for each of the _b tables"""
     def insert_doc(self,lsh,doc_id,date_added):
+        """
+        Given an LSH vector of bucket indices, this method inserts the current doc
+        id in the corresponding bucket for each of the _b tables
+        """
         if (doc_id in self._seen):
             return
         else:
@@ -158,10 +162,12 @@ class LSHCache:
                 if doc_id not in self._cache[i][band_bucket]:
                     self._cache[i][band_bucket].append(doc_id)
 
-    """Given an SQL row, go through the whole pipeline and either insert the doc
-       in the appropriate buckets, or if passive=True, just return the list of
-       buckets which match the probe document"""
     def process_doc(self,doc,passive=True):
+        """
+        Given an SQL row, go through the whole pipeline and either insert the doc
+        in the appropriate buckets, or if passive=True, just return the list of
+        buckets which match the probe document
+        """
         #print '[process_doc]\tentering'
         [doc_id,date_added,doc] = prepare_doc(doc)
         if (doc_id in self._seen):
@@ -184,29 +190,34 @@ class LSHCache:
             self.insert_doc(lsh,doc_id,date_added)
         return (doc_id,dup_buckets)
 
-    """Batch method for adding db docs to cache"""
+
     def process_docs(self,docs,passive=True):
+        """Batch method for adding db docs to cache"""
         print '[add_docs]\tentering with len(docs)=%d' % (len(docs))
         for i,doc in enumerate(docs):
             if (i % 100 == 0):
                 print '\r[add_docs]\tprocessed %d / %d docs:' % (i,len(docs)),
             [doc_id, dup_buckets] = self.process_doc(doc,passive)
 
-    """Writes a duplicate data structure to file as a tsv of the format
-       id1    id2    score
-       Expects dups to be a list of tuples(tuple(id1,id2),score) where score
-       is either a jaccard similarity or edit distance rate"""
     def write_dups(self,dups,out_fname):
+        """
+        Writes a duplicate data structure to file as a tsv of the format
+          id1    id2    score
+        Expects dups to be a list of tuples(tuple(id1,id2),score) where score
+        is either a jaccard similarity or edit distance rate
+        """
         f = open(out_fname, 'w')
         for ids, jaccard in dups.items():
             [id1,id2] = ids
             f.write(str(id1)+'\t'+str(id2)+'\t'+str(jaccard)+'\n')
         ff.close()
 
-    """Computes the mean similarity for a duplicate data structure.
-       Expects dups to be a list of tuples(tuple(id1,id2),score) where score
-       is either a jaccard similarity or edit distance rate"""
     def analyze_dups(self,dups,docs):
+        """
+        Computes the mean similarity for a duplicate data structure.
+        Expects dups to be a list of tuples(tuple(id1,id2),score) where score
+        is either a jaccard similarity or edit distance rate
+        """
         print 'mean score: %f' % (np.mean(dups.values()))
         print 'n: %d' % (len(dups))                
 
