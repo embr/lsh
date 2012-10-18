@@ -1,11 +1,11 @@
 lsh
----
+===
 
 a pure python locality senstive hashing implementation
 
-### Installation
+## Installation
 
-### Usage
+## Usage
 ```python
 
 from lsh import LSHCache
@@ -31,7 +31,7 @@ for i, doc in enumerate(docs):
     ...
 ````
 
-### Roadmap
+## Roadmap
 * add more tests
 * add `save()` and `from_file()` methods
 * rewrite with redis backend?
