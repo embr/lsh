@@ -4,6 +4,12 @@ lsh
 a pure python locality senstive hashing implementation
 
 ## Installation
+`lsh` is packaged with setuptools so it can be easily installed with pip like this:
+
+````
+$ cd lsh/
+$ [sudo] pip install -e .
+````
 
 ## Usage
 ```python
