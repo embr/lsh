@@ -14,7 +14,5 @@ setup(
         },
     install_requires=[
        "python-Levenshtein >= 0.10.2",
-       "MySQL-python >= 1.2.2",
-       "pymongo >= 2.3"
        ]
     )
