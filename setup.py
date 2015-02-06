@@ -13,6 +13,5 @@ setup(
             ]
         },
     install_requires=[
-       "python-Levenshtein >= 0.10.2",
        ]
     )
