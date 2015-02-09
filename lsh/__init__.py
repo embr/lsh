@@ -1,7 +1,6 @@
 from collections import defaultdict
 import numpy as np
 import random
-import Levenshtein
 import sys
 import time
 import logging
